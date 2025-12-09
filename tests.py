@@ -1,9 +1,14 @@
 import crypto
+import storage
 import secrets
 import random
 import string
 
-def testEncrptAndDecrypt():
+def main():
+    testEncryptAndDecrypt()
+    testOpenDB()
+
+def testEncryptAndDecrypt():
     tests = []
     keys = []
     for _ in range(10):
@@ -20,7 +25,23 @@ def testEncrptAndDecrypt():
     for i in range(10):
         x = crypto.decrypt(key=keys[i], ciphertext=ciphertexts[i])
         print(x)
-        
+
+def testOpenDB(): 
+    storage.openDB()        
+    storage.deleteDB()
+    storage.createDB()
+    storage.createDB()
+    storage.addUserPasswordCombo(userName="user1", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(userName="user2", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(userName="user3", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(userName="user4", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(userName="user5", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(userName="user6", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(userName="user7", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.deleteEntryByID(3)
+    storage.deleteEntryByUsername("user2")
+    storage.printAllPasswords()
     
 
-testEncrptAndDecrypt()
+if __name__ == "__main__":
+    main()

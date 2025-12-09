@@ -1,5 +1,142 @@
 import sqlite3
+import os
 
-def addEmailPasswordCombo(email: str, password: str, nonce: str):
-    conn = sqlite.connect("/TestFiles/testVault.db")
-    cursor = conn.cursor
+class PasswordEntry: 
+    def __init__(self,ID, serviceName, userName, password, nonce):
+        self.ID = ID
+        self.serviceName = serviceName
+        self.username = userName
+        self.password = password
+        self.nonce = nonce
+    
+    def getID(self):
+        return self.ID
+    
+    def getServiceName(self):
+        return self.serviceName
+    
+    def getUsername(self):
+        return self.username
+    
+    def getPassword(self):
+        return self.password
+        
+    def getNonce(self):
+        return self.nonce
+
+
+def openDB():
+    try:
+        conn = sqlite3.connect("TestFiles/testVault.db")
+        cursor = conn.cursor()
+    except Exception as e:
+        print(f"Error in openDB method: {e}")
+    return (cursor,conn)
+
+def createDB():
+    cur, conn = openDB()
+    try:
+        res = cur.execute("""
+        SELECT * FROM PASSWORDS;
+        """)
+        print("Database already created.")
+    except:
+        res = cur.execute("""
+        CREATE TABLE PASSWORDS(
+            ID INTEGER PRIMARY KEY,
+            SERVICENAME TEXT NOT NULL,
+            USERNAME TEXT NOT NULL,
+            PASSWORD BLOB NOT NULL,
+            NONCE BLOB NOT NULL
+        );
+        """)
+        conn.commit()
+        print("Database created successfully.")
+
+def deleteDB():
+    path = "TestFiles/testVault.db"
+    if os.path.exists(path):
+        os.remove(path)
+        print("Database removed.")
+    else:
+        print("Database file not found.")
+
+def addUserPasswordCombo(userName: str, password: bytes, nonce: bytes):
+    cur, conn = openDB()
+    try:
+        cur.execute(f"""
+        INSERT INTO PASSWORDS(USERNAME, PASSWORD, NONCE)
+        VALUES (?,?,?);
+        """, (userName, password, nonce))
+        conn.commit()
+        print("Successfully added password")
+    except Exception as e:
+        print("Error inserting a password")
+        print(e)
+
+def deleteEntryByID(ID: int):
+    cur, conn = openDB()
+    try:
+        cur.execute(f"DELETE FROM PASSWORDS WHERE ID = ?;", (ID, ))
+        conn.commit()
+        print("Entry removed successfully")
+    except Exception as e:
+        print(f"Error deleting the password entry.")
+        print(e)
+
+def deleteEntryByUsername(userName: str):
+    cur, conn = openDB()
+    try:
+        cur.execute(f"DELETE FROM PASSWORDS WHERE USERNAME = ?;", (userName, ))
+        conn.commit()
+        print("Entry removed by username successfully")
+    except Exception as e:
+        print(f"Error deleting the password entry.")
+        print(e)
+
+def deleteEntryByService(serviceName: str):
+    cur, conn = openDB()
+    try:
+        cur.execute(f"DELETE FROM PASSWORDS WHERE SERVICE = ?;", (serviceName, ))
+        conn.commit()
+        print("Entry removed by service successfully")
+    except Exception as e:
+        print(f"Error deleting the password entry.")
+        print(e)
+
+def deleteAllPasswords():
+    cur, conn = openDB()
+    try:
+        cur.execute(f"DELETE FROM PASSWORDS;")
+        conn.commit()
+        print("All entries removed successfully.")
+    except Exception as e:
+        print(f"Error deleting password entry")
+        print(e)
+
+def printAllPasswords():
+    cur, conn = openDB()
+    try:
+        query = cur.execute(f"SELECT * FROM PASSWORDS;")
+        rows = cur.fetchall()
+        for row in rows:
+            print(row)
+    except Exception as e:
+        print("Error printing all entries.")
+        print(e)
+
+def getAllPasswords():
+    cur, conn = openDB()
+    res = []
+    try:
+        query = cur.execute(f"SELECT * FROM PASSWORDS;")
+        rows = cur.fetchall()
+        for row in rows:
+            passwordEntry = PasswordEntry(row.split())
+        return res
+    except Exception as e:
+        print("Error getting all entries")
+        print(e)
+        return []
+            
+
