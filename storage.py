@@ -24,6 +24,16 @@ class PasswordEntry:
     def getNonce(self):
         return self.nonce
 
+    def __str__(self):
+        finalStr = f"""
+        ID: {self.getID()}\n
+        Service Name: {self.getServiceName()}\n
+        Username: {self.getUsername()}\n
+        Password: {self.getPassword()}\n
+        Nonce: {self.getNonce()}\n
+        """
+        return finalStr
+
 
 def openDB():
     try:
@@ -53,6 +63,7 @@ def createDB():
         conn.commit()
         print("Database created successfully.")
 
+
 def deleteDB():
     path = "TestFiles/testVault.db"
     if os.path.exists(path):
@@ -61,13 +72,13 @@ def deleteDB():
     else:
         print("Database file not found.")
 
-def addUserPasswordCombo(userName: str, password: bytes, nonce: bytes):
+def addUserPasswordCombo(serviceName:str, userName: str, password: bytes, nonce: bytes):
     cur, conn = openDB()
     try:
         cur.execute(f"""
-        INSERT INTO PASSWORDS(USERNAME, PASSWORD, NONCE)
-        VALUES (?,?,?);
-        """, (userName, password, nonce))
+        INSERT INTO PASSWORDS(SERVICENAME, USERNAME, PASSWORD, NONCE)
+        VALUES (?, ?,?,?);
+        """, (serviceName, userName, password, nonce))
         conn.commit()
         print("Successfully added password")
     except Exception as e:
@@ -97,7 +108,7 @@ def deleteEntryByUsername(userName: str):
 def deleteEntryByService(serviceName: str):
     cur, conn = openDB()
     try:
-        cur.execute(f"DELETE FROM PASSWORDS WHERE SERVICE = ?;", (serviceName, ))
+        cur.execute(f"DELETE FROM PASSWORDS WHERE SERVICENAME = ?;", (serviceName, ))
         conn.commit()
         print("Entry removed by service successfully")
     except Exception as e:
@@ -132,7 +143,9 @@ def getAllPasswords():
         query = cur.execute(f"SELECT * FROM PASSWORDS;")
         rows = cur.fetchall()
         for row in rows:
-            passwordEntry = PasswordEntry(row.split())
+            ID, serviceName, username, password, nonce = row
+            passwordEntry = PasswordEntry(ID, serviceName, username, password, nonce)
+            res.append(passwordEntry)
         return res
     except Exception as e:
         print("Error getting all entries")
