@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import secrets
 
 class PasswordEntry: 
     def __init__(self,ID, serviceName, userName, password, nonce):
@@ -49,6 +50,9 @@ def createDB():
         res = cur.execute("""
         SELECT * FROM PASSWORDS;
         """)
+        res = cur.execute("""
+        SELECT * FROM METADATA;
+        """)
         print("Database already created.")
     except:
         res = cur.execute("""
@@ -60,9 +64,27 @@ def createDB():
             NONCE BLOB NOT NULL
         );
         """)
+        res = cur.execute("""
+        CREATE TABLE IF NOT EXISTS METADATA(
+            KEY TEXT PRIMARY KEY,
+            BLOBVAL BLOB,
+            STRVAL TEXT
+        );
+        """)
         conn.commit()
         print("Database created successfully.")
 
+def generateAndStoreSalt():
+    cur, conn = openDB()
+    salt = secrets.token_bytes(12)
+    cur.execute("INSERT INTO METADATA(KEY, BLOBVAL) VALUES (?, ?);", ("salt", salt))
+    conn.commit()
+
+def storeHashedMasterPassword(hashMasterPassword: str):
+    cur, conn = openDB()
+    res = cur.execute("SELECT COUNT(*) FROM METADATA WHERE STRVAL NOT NULL;")
+    cur.execute("INSERT INTO METADATA(KEY, STRVAL) VALUES (?, ?);", ("hashedPassword", hashMasterPassword))
+    conn.commit()
 
 def deleteDB():
     path = "TestFiles/testVault.db"

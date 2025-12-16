@@ -6,7 +6,11 @@ import string
 
 def main():
     testEncryptAndDecrypt()
+    print()
+    testHashingAndHashingStorage()
+    print()
     testOpenDB()
+    print()
 
 def testEncryptAndDecrypt():
     tests = []
@@ -25,6 +29,51 @@ def testEncryptAndDecrypt():
     for i in range(10):
         x = crypto.decrypt(key=keys[i], ciphertext=ciphertexts[i])
         print(x)
+
+def testHashingAndHashingStorage():
+    tests = []
+    hashes = []
+    keys = []
+    for _ in range(10):
+        tests.append("".join(random.choices(string.ascii_lowercase + string.digits, k = 10)))
+    for i in tests:
+        print(i)
+    for i in tests:
+        hash = crypto.hashPassword(i)
+        print(hash)
+        hashes.append(hash)
+    for i in range(10):
+        e = crypto.verifyHash(masterPassword=tests[i], storedHash=hashes[i])
+        if e == True:
+            print("Good")
+        else:
+            print("Bad")
+    for i in range(10):
+        e = crypto.verifyHash(masterPassword=tests[i], storedHash=hashes[i - 1])
+        if e == True:
+            print("Good")
+        else:
+            print("Bad")
+    for i in range(10):
+        key = crypto.deriveKey(masterPassword=tests[i], salt=secrets.token_bytes(12))
+        keys.append(key)
+    print()
+    for i in hashes:
+        storage.deleteDB()
+        storage.createDB()
+        storage.generateAndStoreSalt()
+        cur, conn = storage.openDB()
+        res = cur.execute("SELECT * FROM METADATA")
+        print(res.fetchone())
+    for i in hashes:
+        storage.deleteDB()
+        storage.createDB()
+        storage.storeHashedMasterPassword(i)
+        cur, conn = storage.openDB()
+        res = cur.execute("SELECT * FROM METADATA")
+        print(res.fetchone())
+ 
+
 
 def testOpenDB(): 
     storage.openDB()        
