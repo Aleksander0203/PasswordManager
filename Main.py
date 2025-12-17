@@ -5,12 +5,6 @@ from argon2 import PasswordHasher
 
 class Client:
 
-    def __init__(self):
-        self.__masterKey = b""
-        self.__masterPassword = ""
-        self.handleLogin()
-        self.setKey()
-
     def handleLogin(self):
         isSet = self._checkIfPasswordIsSet()
         if (isSet):
@@ -20,7 +14,7 @@ class Client:
     
     def _checkIfPasswordIsSet(self):
         hashedPassword = storage.getHashedPassword()
-        if x is None:
+        if hashedPassword is None:
             return False 
         return True
     
@@ -28,7 +22,7 @@ class Client:
         hashedPassword = storage.getHashedPassword()
         passwordInput = input("Enter your password:\n")
         verified = crypto.verifyHash(storedHash = hashedPassword, masterPassword = passwordInput)
-        while (!verified): 
+        while not verified: 
             passwordInput = input("Enter your password:\n")
             verified = crypto.verifyHash(storedHash = hashedPassword, masterPassword = passwordInput)
         self.__masterPassword = passwordInput
@@ -50,7 +44,7 @@ class Client:
         if salt is None:
             storage.generateAndStoreSalt()
         salt = storage.getSalt()
-        self.__masterKey = crypto.deriveKey(masterPassword = self.getPassword(), salt = salt)
+        self.__masterKey = crypto.deriveKey(masterPassword = self.getMasterPassword(), salt = salt)
 
     def getKey(self):
         return self.__masterKey

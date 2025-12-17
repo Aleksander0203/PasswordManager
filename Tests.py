@@ -1,8 +1,11 @@
 import Crypto as crypto
 import Storage as storage
+import Main
 import secrets
 import random
 import string
+from textual.app import App, ComposeResult
+from textual.widgets import Footer, Header
 
 def main():
     testEncryptAndDecrypt()
@@ -12,6 +15,8 @@ def main():
     testOpenDB()
     print()
     testMain()
+    print()
+    testTUI()
 
 def testEncryptAndDecrypt():
     tests = []
@@ -25,11 +30,10 @@ def testEncryptAndDecrypt():
     ciphertexts = []
     for i in range(10):
         x = crypto.encrypt(key=keys[i], plaintext=tests[i])
-        print(x)
         ciphertexts.append(x)
     for i in range(10):
         x = crypto.decrypt(key=keys[i], ciphertext=ciphertexts[i])
-        print(x)
+        assert x == tests[i]
 
 def testHashingAndHashingStorage():
     tests = []
@@ -45,16 +49,10 @@ def testHashingAndHashingStorage():
         hashes.append(hash)
     for i in range(10):
         e = crypto.verifyHash(masterPassword=tests[i], storedHash=hashes[i])
-        if e == True:
-            print("Good")
-        else:
-            print("Bad")
+        assert e == True
     for i in range(10):
         e = crypto.verifyHash(masterPassword=tests[i], storedHash=hashes[i - 1])
-        if e == True:
-            print("Good")
-        else:
-            print("Bad")
+        assert e == False
     for i in range(10):
         key = crypto.deriveKey(masterPassword=tests[i], salt=secrets.token_bytes(12))
         keys.append(key)
@@ -64,14 +62,14 @@ def testHashingAndHashingStorage():
         storage.deleteDB()
         storage.createDB()
         storage.generateAndStoreSalt()
-        cur, conn = storage.openDB()
+        cur, conn = storage.openDB() 
         print(storage.getSalt())
     for i in hashes:
         storage.deleteDB()
         storage.createDB()
         storage.storeHashedMasterPassword(i)
         cur, conn = storage.openDB()
-        print(storage.getHashedPassword())
+        assert i == storage.getHashedPassword()
 
 
 def testOpenDB(): 
@@ -93,9 +91,23 @@ def testOpenDB():
     print(storage.getAllPasswords())
 
 def testMain():
-    inst = main.main()
-    print(inst.getPassword())
+    inst = Main.main()
+    print(inst.getMasterPassword())
     print(inst.getKey())
+
+def testTUI():
+    class StopwatchApp(App):
+        BINDINGS = [("d", "toggle_dark", "Toggle Dark Mode")]
+        def compose(self) -> ComposeResult:
+            yield Header()
+            yield Footer()
+
+        def actionToggleDark(self) -> None:
+            self.theme = (
+                "textual-dark" if self.theme == "textual-light" else "textual-light" 
+            )
+    app = StopwatchApp()
+    app.run()
 
 if __name__ == "__main__":
     main()
