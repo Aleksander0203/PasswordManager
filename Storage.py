@@ -3,12 +3,11 @@ import os
 import secrets
 
 class PasswordEntry: 
-    def __init__(self,ID, serviceName, userName, password, nonce):
+    def __init__(self,ID, serviceName, userName, password):
         self.ID = ID
         self.serviceName = serviceName
         self.username = userName
         self.password = password
-        self.nonce = nonce
     
     def getID(self):
         return self.ID
@@ -21,9 +20,6 @@ class PasswordEntry:
     
     def getPassword(self):
         return self.password
-        
-    def getNonce(self):
-        return self.nonce
 
     def __str__(self):
         finalStr = f"""
@@ -31,7 +27,6 @@ class PasswordEntry:
         Service Name: {self.getServiceName()}\n
         Username: {self.getUsername()}\n
         Password: {self.getPassword()}\n
-        Nonce: {self.getNonce()}\n
         """
         return finalStr
 
@@ -60,8 +55,7 @@ def createDB():
             ID INTEGER PRIMARY KEY,
             SERVICENAME TEXT NOT NULL,
             USERNAME TEXT NOT NULL,
-            PASSWORD BLOB NOT NULL,
-            NONCE BLOB NOT NULL
+            PASSWORD BLOB NOT NULL
         );
         """)
         res = cur.execute("""
@@ -86,6 +80,22 @@ def storeHashedMasterPassword(hashMasterPassword: str):
     cur.execute("INSERT INTO METADATA(KEY, STRVAL) VALUES (?, ?);", ("hashedPassword", hashMasterPassword))
     conn.commit()
 
+def getSalt():
+    cur, conn = openDB()
+    res = cur.execute("SELECT BLOBVAL FROM METADATA WHERE KEY = (?)", ("salt",))
+    try:
+        return res.fetchone()[0]
+    except:
+        return None
+
+def getHashedPassword():
+    cur, conn = openDB()
+    res = cur.execute("SELECT STRVAL FROM METADATA WHERE KEY = (?);", ("hashedPassword", ))
+    try:
+        return res.fetchone()[0]
+    except:
+        return None
+
 def deleteDB():
     path = "TestFiles/testVault.db"
     if os.path.exists(path):
@@ -94,13 +104,13 @@ def deleteDB():
     else:
         print("Database file not found.")
 
-def addUserPasswordCombo(serviceName:str, userName: str, password: bytes, nonce: bytes):
+def addUserPasswordCombo(serviceName:str, userName: str, password: bytes):
     cur, conn = openDB()
     try:
         cur.execute(f"""
-        INSERT INTO PASSWORDS(SERVICENAME, USERNAME, PASSWORD, NONCE)
-        VALUES (?, ?,?,?);
-        """, (serviceName, userName, password, nonce))
+        INSERT INTO PASSWORDS(SERVICENAME, USERNAME, PASSWORD)
+        VALUES (?, ?,?);
+        """, (serviceName, userName, password))
         conn.commit()
         print("Successfully added password")
     except Exception as e:
@@ -165,8 +175,8 @@ def getAllPasswords():
         query = cur.execute(f"SELECT * FROM PASSWORDS;")
         rows = cur.fetchall()
         for row in rows:
-            ID, serviceName, username, password, nonce = row
-            passwordEntry = PasswordEntry(ID, serviceName, username, password, nonce)
+            ID, serviceName, username, password = row
+            passwordEntry = PasswordEntry(ID, serviceName, username, password)
             res.append(passwordEntry)
         return res
     except Exception as e:

@@ -2,7 +2,7 @@ import secrets
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import argon2
 
-def encrypt(plaintext: str, key: str):
+def encrypt(plaintext: str, key: str): 
     nonce = secrets.token_bytes(12)
     ciphertext = nonce + AESGCM(key).encrypt(nonce, plaintext.encode(), b"")
     return ciphertext

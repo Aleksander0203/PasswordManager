@@ -1,5 +1,5 @@
-import crypto
-import storage
+import Crypto as crypto
+import Storage as storage
 import secrets
 import random
 import string
@@ -11,6 +11,7 @@ def main():
     print()
     testOpenDB()
     print()
+    testMain()
 
 def testEncryptAndDecrypt():
     tests = []
@@ -58,21 +59,19 @@ def testHashingAndHashingStorage():
         key = crypto.deriveKey(masterPassword=tests[i], salt=secrets.token_bytes(12))
         keys.append(key)
     print()
+    print(storage.getHashedPassword())
     for i in hashes:
         storage.deleteDB()
         storage.createDB()
         storage.generateAndStoreSalt()
         cur, conn = storage.openDB()
-        res = cur.execute("SELECT * FROM METADATA")
-        print(res.fetchone())
+        print(storage.getSalt())
     for i in hashes:
         storage.deleteDB()
         storage.createDB()
         storage.storeHashedMasterPassword(i)
         cur, conn = storage.openDB()
-        res = cur.execute("SELECT * FROM METADATA")
-        print(res.fetchone())
- 
+        print(storage.getHashedPassword())
 
 
 def testOpenDB(): 
@@ -80,19 +79,23 @@ def testOpenDB():
     storage.deleteDB()
     storage.createDB()
     storage.createDB()
-    storage.addUserPasswordCombo(serviceName="Tesco", userName="user1", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
-    storage.addUserPasswordCombo(serviceName="Aldi", userName="user2", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
-    storage.addUserPasswordCombo(serviceName="Asda", userName="user3", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
-    storage.addUserPasswordCombo(serviceName="GitHub", userName="user4", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
-    storage.addUserPasswordCombo(serviceName="Dom", userName="user5", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
-    storage.addUserPasswordCombo(serviceName="De", userName="user6", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
-    storage.addUserPasswordCombo(serviceName="Hay", userName="user7", password=secrets.token_bytes(12), nonce=secrets.token_bytes(12))
+    storage.addUserPasswordCombo(serviceName="Tesco", userName="user1", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Aldi", userName="user2", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Asda", userName="user3", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="GitHub", userName="user4", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Dom", userName="user5", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="De", userName="user6", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Hay", userName="user7", password=secrets.token_bytes(24))
     storage.deleteEntryByID(3)
     storage.deleteEntryByUsername("user2")
     storage.deleteEntryByService("Dom")    
     storage.printAllPasswords()
     print(storage.getAllPasswords())
-    
+
+def testMain():
+    inst = main.main()
+    print(inst.getPassword())
+    print(inst.getKey())
 
 if __name__ == "__main__":
     main()
