@@ -20,8 +20,10 @@ class Auth:
     def createMasterPassword(self, masterPassword: str):
         if self.isInitialised():
             raise RuntimeError("Vault already initialised")
-        storage.storeHashedMasterPassword(masterPassword)
         storage.generateAndStoreSalt()
+        salt = storage.getSalt()
+        hashedPassword = crypto.hashPassword(masterPassword)
+        storage.storeHashedMasterPassword(hashedPassword)
         self.__key = crypto.deriveKey(masterPassword,salt = storage.getSalt())
 
     def unlock(self, masterPassword: str) -> bool:

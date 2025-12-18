@@ -8,15 +8,18 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header
 
 def main():
+    """
     testEncryptAndDecrypt()
-    print()
-    testHashingAndHashingStorage()
     print()
     testOpenDB()
     print()
-    testMain()
-    print()
-    testTUI()
+    testHashingAndHashingStorage()
+    storage.createDB()
+    """
+    storage.deleteDB()
+    storage.createDB()
+    
+
 
 def testEncryptAndDecrypt():
     tests = []
@@ -87,13 +90,18 @@ def testOpenDB():
     storage.deleteEntryByID(3)
     storage.deleteEntryByUsername("user2")
     storage.deleteEntryByService("Dom")    
-    storage.printAllPasswords()
     print(storage.getAllPasswords())
 
-def testMain():
-    inst = Main.main()
-    print(inst.getMasterPassword())
-    print(inst.getKey())
+def populatePasswords():
+    storage.openDB()
+    storage.addUserPasswordCombo(serviceName="Tesco", userName="user1", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Aldi", userName="user2", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Asda", userName="user3", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="GitHub", userName="user4", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Dom", userName="user5", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="De", userName="user6", password=secrets.token_bytes(24))
+    storage.addUserPasswordCombo(serviceName="Hay", userName="user7", password=secrets.token_bytes(24))
+
 
 def testTUI():
     class StopwatchApp(App):

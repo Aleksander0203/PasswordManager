@@ -2,58 +2,7 @@ import cryptography
 import Storage as storage
 import Crypto as crypto
 from argon2 import PasswordHasher
-
-class Client:
-
-    def handleLogin(self):
-        isSet = self._checkIfPasswordIsSet()
-        if (isSet):
-            self._login()
-        else:
-            self._createNewPassword()
-    
-    def _checkIfPasswordIsSet(self):
-        hashedPassword = storage.getHashedPassword()
-        if hashedPassword is None:
-            return False 
-        return True
-    
-    def _login(self):
-        hashedPassword = storage.getHashedPassword()
-        passwordInput = input("Enter your password:\n")
-        verified = crypto.verifyHash(storedHash = hashedPassword, masterPassword = passwordInput)
-        while not verified: 
-            passwordInput = input("Enter your password:\n")
-            verified = crypto.verifyHash(storedHash = hashedPassword, masterPassword = passwordInput)
-        self.__masterPassword = passwordInput
-
-    def _createNewPassword(self):
-        firstInput = input("In order to use this password manager you must make a master password.\nPlease enter a password:\n")
-        secondInput = input("Enter it again:\n")
-        while firstInput != secondInput:
-            firstInput = input("Passwords did not match. Please try again.\nPlease enter a password:\n")
-            secondInput = input("Enter it again:\n")
-        storage.storeHashedMasterPassword(firstInput)
-        self.__masterPassword = firstInput
-
-    def getMasterPassword(self):
-        return self.__masterPassword
-
-    def setKey(self):
-        salt = storage.getSalt()
-        if salt is None:
-            storage.generateAndStoreSalt()
-        salt = storage.getSalt()
-        self.__masterKey = crypto.deriveKey(masterPassword = self.getMasterPassword(), salt = salt)
-
-    def getKey(self):
-        return self.__masterKey
-
-
-
-def main():
-    inst = Client()
-    return inst
+from tui.App import PasswordManagerApp
 
 if __name__ == "__main__":
-    main()
+    PasswordManagerApp().run()
