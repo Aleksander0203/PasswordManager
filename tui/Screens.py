@@ -1,5 +1,5 @@
 from textual.app import ComposeResult
-from textual.screen import Screen
+from textual.screen import Screen, ModalScreen
 from textual.widgets import Input, ListItem, Button, Label, Header, Footer, ListView
 from textual.containers import Vertical, Horizontal
 import Storage as storage
@@ -19,6 +19,7 @@ class CreatePasswordScreen(Screen):
         )
 
     def on_button_pressed(self, event: Button.Pressed):
+        self.app.resetTimer()
         pw1 = self.query_one("#pw1", Input).value
         pw2 = self.query_one("#pw2", Input).value
 
@@ -41,12 +42,14 @@ class LoginScreen(Screen):
             Button("Unlock", id="unlock"),
         )
     def on_button_pressed(self, event: Button.Pressed):
+        self.app.resetTimer()
         password = self.query_one("#pw", Input).value
         if not self.auth.unlock(password):
             self.notify("Incorrect password", severity="error")
             return
         self.notify("Vault unlocked!", severity="information")
         self.app.pop_screen()
+        self.app.inactivityTimer.resume()
         self.app.push_screen(VaultScreen(self.auth))
 
 
@@ -69,6 +72,7 @@ class VaultScreen(Screen):
         self.populateEntries()
 
     def on_button_pressed(self, event):
+        self.app.resetTimer()
         if event.button.id == "add":
             self.app.push_screen(AddEntryScreen(self.auth))
         if event.button.id == "logout":
@@ -76,6 +80,7 @@ class VaultScreen(Screen):
             self.app.push_screen(LoginScreen(self.auth))
 
     def on_list_view_selected(self, event: ListView.Selected):
+        self.app.resetTimer()
         item = event.item
         entry = item.entry
         self.app.push_screen(ViewEntryScreen(self.auth, entry))
@@ -121,6 +126,7 @@ class AddEntryScreen(Screen):
         yield Footer()
 
     def on_button_pressed(self, event):
+        self.app.resetTimer()
         if event.button.id == "toggleView":
             passwordInput = self.query_one("#password", Input)
             passwordInput.password = not passwordInput.password
@@ -135,7 +141,21 @@ class AddEntryScreen(Screen):
             vaultScreen = self.app.screen_stack[-1]
             vaultScreen.populateEntries()
 
+    def on_unmount(self):
+        try:
+            self.query_one("#password", Input).value = ""
+            self.query_one("#username", Input).value = ""
+            self.query_one("serviceName", Input).value = ""
+        except:
+            pass
+
+
 class ViewEntryScreen(Screen):
+    BINDINGS = [
+        ("c", "copyPassword", "Copy Password"), 
+        ("u", "copyUsername", "Copy Username"), 
+        ("d", "deleteEntry", "Delete Entry")
+    ]
 
     def __init__(self,auth,passwordEntry):
         super().__init__()
@@ -160,8 +180,17 @@ class ViewEntryScreen(Screen):
             ),
             Button("Back", id="back")
         )
+        yield Footer()
+
+    def on_unmount(self):
+        try:
+            passwordLabel = self.query_one("#passwordLabel", Label)
+            passwordLabel.update("********")
+        except:
+            pass
 
     def on_button_pressed(self, event):
+        self.app.resetTimer()
         if event.button.id == "toggleView":
             if event.button.label == "Show":
                 passwordLabel = self.query_one("#passwordLabel", Label)
@@ -172,7 +201,58 @@ class ViewEntryScreen(Screen):
                 passwordLabel.update("********")
                 event.button.label = "Show"
         elif event.button.id == "back":
+            self.clearClipboard()
             self.app.pop_screen()
             vaultScreen = self.app.screen_stack[-1]
             vaultScreen.populateEntries()
 
+    def action_copyUsername(self):
+        self.app.copy_to_clipboard(self.passwordEntry.getUsername())
+        self.notify("Username has been added to clipboard.", severity="information")
+        self.set_timer(delay=60 * 10, callback=self.clearClipboard)
+
+    def action_copyPassword(self):
+        plaintext = crypto.decrypt(ciphertext = self.passwordEntry.getPassword(), key = self.auth.getKey())
+        self.app.copy_to_clipboard(plaintext)
+        self.notify("Password has been added to clipboard.", severity="information")
+        self.set_timer(delay=60 * 10, callback=self.clearClipboard)
+
+    def action_deleteEntry(self):
+        self.app.push_screen(ConfirmDeleteScreen("Are you sure you want to delete this entry?"), self._handle_deleteConfirmation)
+
+    def clearClipboard(self):
+        if self.app.clipboard:
+            self.app.copy_to_clipboard("")
+            self.notify("Clipboard has been cleared.", severity="information")
+
+    def _handle_deleteConfirmation(self, confirmed):
+        if not confirmed:
+            return
+        entryid = self.passwordEntry.getID()
+        storage.deleteEntryByID(entryid)
+        self.app.pop_screen()
+        vaultScreen = self.app.screen_stack[-1]
+        vaultScreen.populateEntries()
+
+        
+
+class ConfirmDeleteScreen(ModalScreen[bool]):
+
+    def __init__(self, message: str):
+        super().__init__()
+        self.message = message
+    
+    def compose(self):
+        yield Vertical(
+            Label(self.message),
+            Horizontal(
+                Button("Cancel", id="cancel"),
+                Button("Delete", id="confirm", variant="error"),
+            )
+        )
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "confirm":
+            self.dismiss(True)
+        else:
+            self.dismiss(False)
