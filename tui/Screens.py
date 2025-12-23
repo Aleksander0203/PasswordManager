@@ -4,6 +4,7 @@ from textual.widgets import Input, ListItem, Button, Label, Header, Footer, List
 from textual.containers import Vertical, Horizontal
 import Storage as storage
 import Crypto as crypto
+import random
 
 class CreatePasswordScreen(Screen):
     def __init__(self, auth):
@@ -57,14 +58,15 @@ class VaultScreen(Screen):
     def __init__(self,auth):
         super().__init__()
         self.auth = auth
+        self.searchQuery = ""
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield Vertical(
             Label("Vault"),
+            Input(placeholder="Search",id="search"),
             ListView(id="pwdEntries"),
-            Button("Add Entry", id="add"),
-            Button("Logout", id="logout")
+            Horizontal(Button("Add Entry", id="add"),Button("Logout", id="logout"), Button("Generate Password", id="genPassword"))
         )
         yield Footer()
 
@@ -78,6 +80,8 @@ class VaultScreen(Screen):
         if event.button.id == "logout":
             self.auth.lock()
             self.app.push_screen(LoginScreen(self.auth))
+        if event.button.id == "genPassword":
+            self.app.push_screen(GeneratePasswordScreen())
 
     def on_list_view_selected(self, event: ListView.Selected):
         self.app.resetTimer()
@@ -85,11 +89,19 @@ class VaultScreen(Screen):
         entry = item.entry
         self.app.push_screen(ViewEntryScreen(self.auth, entry))
 
+    def on_input_changed(self, event: Input.Changed):
+        if event.input.id == "search":
+            self.searchQuery = event.value.lower()
+            self.populateEntries()
+
     def populateEntries(self):
         entries=storage.getAllPasswords()
         listView = self.query_one("#pwdEntries", ListView)
         listView.clear()
         for i in entries:
+            if self.searchQuery:
+                if (self.searchQuery not in i.getUsername().lower() and self.searchQuery not in i.getServiceName().lower()):
+                    continue
             item = ListItem(
                 Horizontal(
                     Label(i.serviceName),
@@ -101,13 +113,12 @@ class VaultScreen(Screen):
             listView.append(item)
 
 
-
-
 class AddEntryScreen(Screen):
 
     def __init__(self,auth):
         super().__init__()
         self.auth = auth
+        self.STRING_OF_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -121,6 +132,8 @@ class AddEntryScreen(Screen):
                 Input(password=True,placeholder="Password", id="password"),
                 Button("Show", id="toggleView")
             ),
+            Button("Generate", id="generate"),
+            Button("Back", id="back"),
             Button("Add Entry", id="addEntry")
         ) 
         yield Footer()
@@ -130,7 +143,7 @@ class AddEntryScreen(Screen):
         if event.button.id == "toggleView":
             passwordInput = self.query_one("#password", Input)
             passwordInput.password = not passwordInput.password
-            event.button.label = "Hide" if passwordInput.password == True else "Show"
+            event.button.label = "Show" if passwordInput.password == True else "Hide"
         elif event.button.id == "addEntry":
             serviceNameEntry = self.query_one("#serviceName", Input)
             username = self.query_one("#username", Input)
@@ -140,6 +153,16 @@ class AddEntryScreen(Screen):
             self.app.pop_screen()
             vaultScreen = self.app.screen_stack[-1]
             vaultScreen.populateEntries()
+        elif event.button.id == "generate":
+            generatedPassword = ""
+            for _ in range(16):
+                generatedPassword+= random.choice(self.STRING_OF_CHARS)
+            self.query_one("#password", Input).value = generatedPassword
+        elif event.button.id == "back":
+            self.query_one("#serviceName", Input).value = ""
+            self.query_one("#username", Input).value = ""
+            self.query_one("#password", Input).value = ""
+            self.app.pop_screen()
 
     def on_unmount(self):
         try:
@@ -148,6 +171,52 @@ class AddEntryScreen(Screen):
             self.query_one("serviceName", Input).value = ""
         except:
             pass
+
+class EditEntryScreen(AddEntryScreen):
+
+    def __init__(self, auth, passwordEntry):
+        super().__init__(auth)
+        self.passwordEntry = passwordEntry
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Vertical(
+            Label("Enter Service Name:"),
+            Input(placeholder="Service Name", id="serviceName"),
+            Label("Enter Username"),
+            Input(placeholder="Username", id="username"),
+            Label("Enter Password"),
+            Horizontal(
+                Input(password=True,placeholder="Password", id="password"),
+                Button("Show", id="toggleView")
+            ),
+            Button("Edit Entry", id="editEntry")
+        ) 
+        yield Footer()
+
+    def on_mount(self):
+        self.query_one("#password", Input).value = crypto.decrypt(ciphertext=self.passwordEntry.getPassword(),key=self.auth.getKey())
+        self.query_one("#username", Input).value = self.passwordEntry.getUsername()
+        self.query_one("#serviceName", Input).value = self.passwordEntry.getServiceName()
+
+    def on_button_pressed(self, event):
+        self.app.resetTimer()
+        if event.button.id == "toggleView":
+            passwordInput = self.query_one("#password", Input)
+            passwordInput.password = not passwordInput.password
+            event.button.label = "Hide" if passwordInput.password == True else "Show"
+        elif event.button.id == "editEntry":
+            serviceNameEntry = self.query_one("#serviceName", Input)
+            username = self.query_one("#username", Input)
+            passwordInput = self.query_one("#password", Input)
+            encryptedPassword = crypto.encrypt(passwordInput.value, self.auth.getKey())
+            storage.editPasswordByID(serviceNameEntry.value, username.value, encryptedPassword, self.passwordEntry.getID())
+            
+            self.app.pop_screen()
+            self.app.pop_screen()
+            self.app.push_screen(ViewEntryScreen(self.auth, storage.getEntryByID(self.passwordEntry.getID())))
+
+
 
 
 class ViewEntryScreen(Screen):
@@ -178,6 +247,7 @@ class ViewEntryScreen(Screen):
                 Label("********", id="passwordLabel"),
                 Button("Show", id="toggleView")
             ),
+            Button("Edit", id="editEntry"),
             Button("Back", id="back")
         )
         yield Footer()
@@ -205,6 +275,8 @@ class ViewEntryScreen(Screen):
             self.app.pop_screen()
             vaultScreen = self.app.screen_stack[-1]
             vaultScreen.populateEntries()
+        elif event.button.id == "editEntry":
+            self.app.push_screen(EditEntryScreen(self.auth, self.passwordEntry))
 
     def action_copyUsername(self):
         self.app.copy_to_clipboard(self.passwordEntry.getUsername())
@@ -256,3 +328,46 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
             self.dismiss(True)
         else:
             self.dismiss(False)
+
+class GeneratePasswordScreen(Screen):
+
+    def __init__(self):
+        super().__init__()
+        self.STRING_OF_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+    
+    def compose(self):
+        yield Header()
+        yield Vertical(
+            Label("Generate a password:"),
+            Horizontal(
+                Input(password=True, placeholder="Password", id="password"),
+            ),
+            Button("Show", id="toggleView"),
+            Button("Generate", id="generate")
+
+        )
+        yield Button("Back", id="back")
+        yield Footer()
+    
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "generate":
+            password = self.query_one("#password", Input)
+            generatedPassword = ""
+            for _ in range(16):
+                generatedPassword += random.choice(self.STRING_OF_CHARS)
+            password.value = generatedPassword
+            self.app.copy_to_clipboard(password.value)
+            self.notify("Generated password added to clipboard",severity="information")
+            self.set_timer(delay=60*10, callback = self.clearClipboard)
+        elif event.button.id == "toggleView":
+            passwordInput = self.query_one("#password", Input)
+            passwordInput.password = not passwordInput.password
+            event.button.label = "Show" if passwordInput.password == True else "Hide"
+        else:
+            self.app.pop_screen()
+
+    def clearClipboard(self):
+        if self.app.clipboard:
+            self.app.copy_to_clipboard("")
+            self.notify("Clipboard has been cleared.", severity="information")
+

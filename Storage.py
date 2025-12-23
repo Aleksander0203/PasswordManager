@@ -1,13 +1,15 @@
 import sqlite3
 import os
 import secrets
+import time
 
 class PasswordEntry: 
-    def __init__(self,ID, serviceName, userName, password):
+    def __init__(self,ID, serviceName, userName, password, updatedAt):
         self.ID = ID
         self.serviceName = serviceName
         self.username = userName
         self.password = password
+        self.updatedAt = updatedAt
     
     def getID(self):
         return self.ID
@@ -20,6 +22,9 @@ class PasswordEntry:
     
     def getPassword(self):
         return self.password
+
+    def getUpdatedAt(self):
+        return self.updatedAt
 
     def __str__(self):
         finalStr = f"""
@@ -49,7 +54,8 @@ def createDB():
         ID INTEGER PRIMARY KEY,
         SERVICENAME TEXT NOT NULL,
         USERNAME TEXT NOT NULL,
-        PASSWORD BLOB NOT NULL
+        PASSWORD BLOB NOT NULL,
+        UPDATED_AT INTEGER NOT NULL
     );
     """)
     res = cur.execute("""
@@ -97,10 +103,7 @@ def deleteDB():
 
 def addUserPasswordCombo(serviceName:str, userName: str, password: bytes):
     cur, conn = openDB()
-    cur.execute(f"""
-    INSERT INTO PASSWORDS(SERVICENAME, USERNAME, PASSWORD)
-    VALUES (?, ?,?);
-    """, (serviceName, userName, password))
+    cur.execute(f"INSERT INTO PASSWORDS(SERVICENAME, USERNAME, PASSWORD, UPDATED_AT) VALUES (?,?,?,?);", (serviceName, userName, password, int(time.time()), ))
     conn.commit()
     closeDB(conn)
 
@@ -128,16 +131,29 @@ def deleteAllPasswords():
     conn.commit()
     closeDB(conn)
 
+def editPasswordByID(serviceName: str, username: str, password: bytes, id: int):
+    cur, conn = openDB()
+    cur.execute("UPDATE PASSWORDS SET SERVICENAME = ?, USERNAME = ?, PASSWORD = ?, UPDATED_AT = ? WHERE ID = ?;", (serviceName, username, password, int(time.time()),id,  ))
+    conn.commit()
+    closeDB(conn)
+
 def getAllPasswords():
     cur, conn = openDB()
     res = []
-    query = cur.execute(f"SELECT * FROM PASSWORDS;")
+    query = cur.execute(f"SELECT * FROM PASSWORDS ORDER BY UPDATED_AT DESC;")
     rows = cur.fetchall()
     for row in rows:
-        ID, serviceName, username, password = row
-        passwordEntry = PasswordEntry(ID, serviceName, username, password)
+        ID, serviceName, username, password, updatedAt = row
+        passwordEntry = PasswordEntry(ID, serviceName, username, password, updatedAt)
         res.append(passwordEntry)
     closeDB(conn)
     return res
-            
 
+def getEntryByID(ID: int):
+    cur, conn = openDB()
+    query = cur.execute(f"SELECT * FROM PASSWORDS WHERE ID = ?;", (ID, )) 
+    row = cur.fetchone()
+    ID, serviceName, username, password, updatedAt = row
+    passwordEntry = PasswordEntry(ID, serviceName, username, password, updatedAt)
+    closeDB(conn)
+    return passwordEntry

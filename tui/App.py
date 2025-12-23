@@ -25,7 +25,7 @@ class PasswordManagerApp(App):
         if self.auth.isInitialised():
             self.push_screen(LoginScreen(self.auth))
         else:
-            self.push_screen(CreatePassowrdScreen(self.auth))
+            self.push_screen(CreatePasswordScreen(self.auth))
 
     def resetTimer(self):
         if hasattr(self, "inactivityTimer"):
