@@ -104,9 +104,9 @@ class VaultScreen(Screen):
                     continue
             item = ListItem(
                 Horizontal(
-                    Label(i.serviceName),
-                    Label(i.username),
-                    Label("********")
+                    Label(i.serviceName, classes="listServiceName"),
+                    Label(i.username, classes="listUsername"),
+                    Label("********", classes="listPassword")
                 )
             )
             item.entry = i 

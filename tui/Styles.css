@@ -1,0 +1,41 @@
+
+Screen {
+    background: #0f1117;
+    color: #e5e9f0;
+}
+
+Vertical {
+    padding: 1;
+}
+
+Button {
+    background: #374151;
+    border: round #6b7280;
+    width:1fr;
+}
+
+Button:hover {
+    background: #4b5563;
+}
+
+Input {
+    background: #111827;
+    border: tall #374151;
+}
+
+ListView {
+    border: round #374151;
+}
+ListItem{
+    height:2;
+}
+
+.listServiceName {
+    width:1fr;
+}
+.listUsername {
+    width:1fr;
+}
+.listPassword {
+    width:1fr;
+}
